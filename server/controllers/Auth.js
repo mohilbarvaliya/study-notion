@@ -169,7 +169,7 @@ const Login = async(req,res)=>{
         if(await bcrypt.compare(password,user.password)){
             const payload ={
                 email,
-                id:user._id,
+                _id:user._id,
                 role:user.accountType
             }
             const token = jwt.sign(payload,process.env.JWT_SECRET,{

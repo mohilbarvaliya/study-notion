@@ -46,7 +46,7 @@ const CreateCourse = async (req, res) => {
         },
             { new: true })
 
-        await Tag.findByIdAndUpdate({_id:tag},{
+        await Category.findByIdAndUpdate({_id:Category},{
             $push:{
                 courses:newCourse._id
                 }
