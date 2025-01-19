@@ -3,12 +3,12 @@ const Category = require('../models/Category.model')
 
 const createCategory = async (req, res) => {
     try {
-        const { name,description } = req.body
+        const { name, description } = req.body
 
-        if(!name || !description){
+        if (!name || !description) {
             return res.status(404).json({
-                success:false,
-                message:"Please provide name and description"
+                success: false,
+                message: "Please provide name and description"
             })
         }
 
@@ -17,10 +17,10 @@ const createCategory = async (req, res) => {
             description
         })
         res.status(201).json({
-            success:true,
-            message:"Tag created successfully",
-            Category:CategoryDetail
-            })
+            success: true,
+            message: "Tag created successfully",
+            Category: CategoryDetail
+        })
 
     } catch (e) {
         console.log("Error in create Category controller", e)
@@ -29,24 +29,101 @@ const createCategory = async (req, res) => {
 }
 
 
-const getAllCategory = async (req,res) => {
+const getAllCategory = async (req, res) => {
     try {
-        
-        const Categorys = await Category.find({},{name:true,description:true})
+
+        const Categorys = await Category.find({}, { name: true, description: true })
 
         return res.status(200).json({
-            success:true,
-            message:"Tag fetchout successfully",
-            Categorys:Categorys
+            success: true,
+            message: "Tag fetchout successfully",
+            Categorys: Categorys
         })
 
     } catch (e) {
         console.log("Error in get all Category controller", e)
-        return res.status(500).json({ 
+        return res.status(500).json({
             success: false,
-            message: "Internal Server Error"})
-        
+            message: "Internal Server Error"
+        })
+
     }
 }
 
-module.exports = { createCategory,getAllCategory}
+exports.categoryPageDetails = async (req, res) => {
+    try {
+        const { categoryId } = req.body
+        console.log("PRINTING CATEGORY ID: ", categoryId);
+        // Get courses for the specified category
+        const selectedCategory = await Category.findById(categoryId)
+            .populate({
+                path: "courses",
+                match: { status: "Published" },
+                populate: "ratingAndReviews",
+            })
+            .exec()
+
+        //console.log("SELECTED COURSE", selectedCategory)
+        // Handle the case when the category is not found
+        if (!selectedCategory) {
+            console.log("Category not found.")
+            return res
+                .status(404)
+                .json({ success: false, message: "Category not found" })
+        }
+        // Handle the case when there are no courses
+        if (selectedCategory.courses.length === 0) {
+            console.log("No courses found for the selected category.")
+            return res.status(404).json({
+                success: false,
+                message: "No courses found for the selected category.",
+            })
+        }
+
+        // Get courses for other categories
+        const categoriesExceptSelected = await Category.find({
+            _id: { $ne: categoryId },
+        })
+        let differentCategory = await Category.findOne(
+            categoriesExceptSelected[getRandomInt(categoriesExceptSelected.length)]
+                ._id
+        )
+            .populate({
+                path: "courses",
+                match: { status: "Published" },
+            })
+            .exec()
+        //console.log("Different COURSE", differentCategory)
+        // Get top-selling courses across all categories
+        const allCategories = await Category.find()
+            .populate({
+                path: "courses",
+                match: { status: "Published" },
+                populate: {
+                    path: "instructor",
+                },
+            })
+            .exec()
+        const allCourses = allCategories.flatMap((category) => category.courses)
+        const mostSellingCourses = allCourses
+            .sort((a, b) => b.sold - a.sold)
+            .slice(0, 10)
+        // console.log("mostSellingCourses COURSE", mostSellingCourses)
+        res.status(200).json({
+            success: true,
+            data: {
+                selectedCategory,
+                differentCategory,
+                mostSellingCourses,
+            },
+        })
+    } catch (error) {
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error",
+            error: error.message,
+        })
+    }
+}
+
+module.exports = { createCategory, getAllCategory }

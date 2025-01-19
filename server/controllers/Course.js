@@ -6,7 +6,7 @@ require('dotenv').config()
 
 const CreateCourse = async (req, res) => {
     try {
-        const { courseName, courseDescription, whatYouWillLearn, price, tag,category } = req.body
+        const { courseName, courseDescription, whatYouWillLearn, price, tag, category } = req.body
 
         const { thumbnail } = req.files
 
@@ -46,10 +46,10 @@ const CreateCourse = async (req, res) => {
         },
             { new: true })
 
-        await Category.findByIdAndUpdate({_id:Category},{
-            $push:{
-                courses:newCourse._id
-                }
+        await Category.findByIdAndUpdate({ _id: Category }, {
+            $push: {
+                courses: newCourse._id
+            }
         })
 
         res.status(201).json({ message: 'Course created successfully', newCourse })
@@ -64,28 +64,70 @@ const CreateCourse = async (req, res) => {
 }
 
 
-const getAllCourses = async(req,res)=>{
+const getAllCourses = async (req, res) => {
     try {
-        const courses = await Course.find({},{
-            courseName:true,
-            price:true,
-            thumbnail:true,
-            instructor:true,
-            ratingAndReviews:true,
-            studentsEnrolled:true
+        const courses = await Course.find({}, {
+            courseName: true,
+            price: true,
+            thumbnail: true,
+            instructor: true,
+            ratingAndReviews: true,
+            studentsEnrolled: true
         }).populate('Instructor').exec()
         return res.status(200).json({
-            success:true,
-            message:"All Courses Get Successfully",
+            success: true,
+            message: "All Courses Get Successfully",
             courses
         })
     } catch (e) {
-        console.log('Error in getAllCorses controller',e)
+        console.log('Error in getAllCorses controller', e)
         return res.status(500).json({
             success: false,
             message: "Internal Server Error",
-            })
+        })
     }
 }
 
-module.exports = { CreateCourse,getAllCourses }
+const getCourseDetail = async (req, res) => {
+    try {
+        const { courseId } = req.body
+
+        if (!courseId) {
+            return res.status(400).json({
+                success: false,
+                message: "Course ID is required"
+        })
+    }
+
+            const courseDetail = await Course.findById(courseId).populate({
+                path: 'instructor',
+                populate: {
+                    path: 'additionalDetails',
+                },
+            }).populate({
+                path: "courseContent",
+                populate: {
+                    path: "subSection",
+                }
+            })
+                .populate('ratingAndReviews')
+                .populate('Category').exec()
+
+            return res.status(200).json({
+                success: true,
+                message: "detail fetch successfully",
+                data: courseDetail
+            })
+
+        
+    } catch (e) {
+        console.log('Error in getAllCorses detail controller', e)
+        return res.status(500).json({
+            success: false,
+            message: "Internal Server Error",
+        })
+    }
+}
+
+
+module.exports = { CreateCourse, getAllCourses ,getCourseDetail }
